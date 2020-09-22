@@ -17,6 +17,8 @@ miic.reconstruct <- function(input_data = NULL,
                              test_mar = TRUE,
                              consistent = "no",
                              max_iteration = NULL,
+                             tau = NULL,
+                             delta_tau = NULL,
                              negative_info = FALSE
                              ) {
   n_samples <- nrow(input_data)
@@ -87,6 +89,12 @@ miic.reconstruct <- function(input_data = NULL,
   }
   if (!is.null(is_contextual)) {
     arg_list[["is_contextual"]] <- is_contextual
+  }
+  if (!is.null(tau)) {
+    arg_list[["tau"]] <- tau
+  }
+  if (!is.null(delta_tau)) {
+    arg_list[["delta_tau"]] <- delta_tau
   }
 
   cpp_input <- list("factor" = input_factor, "double" = input_double,

@@ -18,7 +18,7 @@ summarizeResults <- function(observations = NULL, results = NULL,
   predicted_edges <- apply(predicted_edges, 2, function(x) { var_names[x] })
   # Add to summarized edges list
   if(length(predicted_edges > 0)) summarized_edges <- predicted_edges
-
+  
   edges <- results$edges
   # List of negative edges with non null conditioning set
   conditioned_edges <- as.matrix(edges[(!is.na(edges$ai.vect)) &
@@ -29,7 +29,7 @@ summarizeResults <- function(observations = NULL, results = NULL,
   # Add to summarized edges list
   summarized_edges <- rbind(summarized_edges, conditioned_edges)
                             #indep_null_cond_set_edges)
-
+  
   if (!is.null(true_edges)) {
     # List of False Negative edges
     false_negative_edges <- data.frame(
@@ -51,7 +51,6 @@ summarizeResults <- function(observations = NULL, results = NULL,
     )
   }
 
-
   n <- nrow(summarized_edges)
   summary <- data.frame(
     x = character(n), y = character(n), type = character(n), ai = character(n),
@@ -59,10 +58,11 @@ summarizeResults <- function(observations = NULL, results = NULL,
     info = numeric(n), info_cond = numeric(n), cplx = numeric(n),
     Nxy_ai = numeric(n), info_shifted = numeric(n), infOrt = numeric(n),
     trueOrt = numeric(n), isOrtOk = character(n), sign = character(n),
-    partial_correlation = numeric(n), is_causal = NA, proba = character(n),
-    confidence = character(n), stringsAsFactors = FALSE
+    partial_correlation = numeric(n), is_causal = character(n),
+    proba = character(n), confidence = character(n), stringsAsFactors = FALSE
   )
   if(n == 0) return(summary)
+  summary$is_causal = NA
 
   # Edge ordering (A<-B or B->A) is given by lexicographical sort
   summary[,c('x','y')] = t(apply(as.data.frame(summarized_edges)[,c(1,2)], 1, function(row){sort(row)}))

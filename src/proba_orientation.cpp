@@ -16,6 +16,7 @@ namespace {
 
 constexpr int kRemovalMark = -1;
 constexpr double kScoreLowest = std::numeric_limits<double>::lowest();
+constexpr double kScoreMax = std::numeric_limits<double>::max();
 
 bool isHead(double score) { return score > 0; }  // proba > 0.5
 bool isTail(double score) { return score < 0; }  // proba < 0.5
@@ -112,7 +113,8 @@ void induceScore(
 // return vector<ProbaArray> Each ProbaArray is bound to an unshielded Triple
 vector<ProbaArray> getOriProbasList(const vector<Triple>& triples,
     const vector<double>& I3_list, const vector<int>& is_contextual,
-    bool latent, bool degenerate, bool propagation, bool half_v_structure) {
+    bool latent, bool degenerate, bool propagation, bool half_v_structure,
+    int tau_max, const vector<int>& nodes_lags) {
   // A score is a quantity almost proportional to abs(I3). All probabilities can
   // be expressed in the form of 1 / (1 + exp(-score)), and they suffer from
   // loss of numerical precision for high score due to the exponential term.
@@ -127,6 +129,7 @@ vector<ProbaArray> getOriProbasList(const vector<Triple>& triples,
   vector<ScoreArray> scores(n_triples);
   // Rank is the highest absolute value of unsettled score for each triple.
   vector<double> rank(n_triples, 0);
+    
   for (int i = 0; i < n_triples; ++i) {
     // Initialize scores of v-structure
     if (I3_list[i] < 0) {
@@ -146,6 +149,47 @@ vector<ProbaArray> getOriProbasList(const vector<Triple>& triples,
         scores[i][3].value = -scores[i][2].value;
       }
     }
+    //
+    // In temporal mode, use time for orientation 
+    //
+    if (tau_max >= 1) {
+      //
+      // Orient edge using time when the edge is lagged.
+      // The head side is always sure because the time flows from oldest
+      // to newest node, so the newest node is associated to kScoreMax.
+      // The tail side will be set only if latent variable is not activated,
+      // then the oldest node is associated to kScoreLowest.
+      // (when latent variable is activated, we do nothing because 
+      // we can not assume that the oldest node is a tail: there can be 
+      // an edge going from the latent variable to the oldest node)
+      //
+      int nodeX_lag = nodes_lags[ triples[i][0] ];
+      int nodeZ_lag = nodes_lags[ triples[i][1] ];
+      int nodeY_lag = nodes_lags[ triples[i][2] ];
+      
+      if (nodeX_lag < nodeZ_lag) {
+        scores[i][0] = ProbaScore{kScoreMax, true};
+        if (!latent)
+          scores[i][1] = ProbaScore{kScoreLowest, true};
+      }
+      else if (nodeX_lag > nodeZ_lag) {
+        scores[i][1] = ProbaScore{kScoreMax, true};
+        if (!latent)
+          scores[i][0] = ProbaScore{kScoreLowest, true};
+      }
+      
+      if (nodeZ_lag < nodeY_lag) {
+        scores[i][2] = ProbaScore{kScoreMax, true};
+        if (!latent)
+          scores[i][3] = ProbaScore{kScoreLowest, true};
+      }
+      else if (nodeZ_lag > nodeY_lag) {
+        scores[i][3] = ProbaScore{kScoreMax, true};
+        if (!latent)
+          scores[i][2] = ProbaScore{kScoreLowest, true};
+      }
+    }
+    
     // Initialize scores of triples involving contextual variables
     int X = triples[i][0], Z = triples[i][1], Y = triples[i][2];
     if (is_contextual[X]) {  // X --* Z, X cannot be the child of Z
